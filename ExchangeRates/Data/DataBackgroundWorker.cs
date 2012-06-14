@@ -16,7 +16,7 @@ namespace ExchangeRates.Data
     /// Background Worker handles pulling data from RemoteService and save it to database
     /// 
     /// The role of this worker is to avoid multiple Insert operation with the same data into database
-    /// which will result in unexpected error due to duplicated primary key inserted
+    /// which will result in unexpected error due to duplicated primary key insert
     /// 
     /// There is only one worker and only one request is proceeded at a time.
     /// </summary>
@@ -124,34 +124,17 @@ namespace ExchangeRates.Data
         {
             // Create DB context
             using (ExchangeRateContext context = new ExchangeRateContext())
-            {
-                // Get from time and to time and strip their time parts
-                var dates = request.ListOfDays.ToList();
-
-                // Retrieve the ExchangeRate data from database
-                // Then filter with requested currency and request time 
-                var rates = context.ExchangeRates
-                                   .Where(er => dates.Contains(er.Date))
-                                   .Select(er => er.Date)
-                                   .Distinct();
-
-                // Remove days that already has data of requested currency in the database from the date array
-                foreach (var rate in rates) dates.Remove(rate.Date);
+            {               
+                // Load data from remote service
+                dynamic data = ExchangeRateClient.ReadFromRemoteService(request.ListOfDays);
 
                 using (TransactionScope scope = new TransactionScope(TransactionScopeOption.Required,
                     new TransactionOptions { IsolationLevel = IsolationLevel.RepeatableRead }))
                 {
 
-                    // Get data for days that don't have data in the database
-                    foreach (var dateTime in dates)
-                    {
-                        // Load data from remote service
-                        dynamic data = ExchangeRateClient.ReadDateFromRemoteService(dateTime);
-
-                        // Insert all tracked currencies data into the context
-                        foreach (string currency in _trackedCurrencies)
-                            InsertExchangeRate(context, dateTime, currency, data);
-                    }
+                    // Insert all tracked currencies data into the context
+                    foreach (string currency in _trackedCurrencies)
+                        UpdateDataForCurrency(context, currency, request, data);                    
 
                     // Save context
                     context.SaveChanges();
@@ -163,6 +146,36 @@ namespace ExchangeRates.Data
         }
 
         /// <summary>
+        /// Check and Insert data for the given currency into database
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="currency"></param>
+        /// <param name="request"></param>
+        /// <param name="data"></param>
+        private void UpdateDataForCurrency(ExchangeRateContext context, string currency, DataRequest request, dynamic data)
+        {
+            // Get from time and to time and strip their time parts
+            var dates = request.ListOfDays.ToList();
+
+            // Retrieve the ExchangeRate data from database
+            // Then filter with requested currency and request time 
+            var rates = context.ExchangeRates
+                               .Where(er => er.Currency == currency && dates.Contains(er.Date))
+                               .Select(er => er.Date)
+                               .Distinct();
+
+            // Remove days that already has data of requested currency in the database from the date array
+            foreach (var rate in rates) dates.Remove(rate.Date);
+
+            // Get data for days that don't have data in the database
+            foreach (var dateTime in dates)
+            {
+                // Insert data into the context
+                InsertExchangeRate(context, dateTime, currency, data);
+            }
+        }
+
+        /// <summary>
         /// Insert a single EnchangeRate record to the database context
         /// </summary>
         /// <param name="context"></param>
@@ -170,20 +183,27 @@ namespace ExchangeRates.Data
         /// <param name="currency"></param>
         /// <param name="data"></param>
         private void InsertExchangeRate(ExchangeRateContext context, DateTime date, string currency, dynamic data)
-        {                       
-            if (data != null && data["rates"].ContainsKey(currency))
+        {
+            try
             {
-                // Create new Exchange Rate
-                var newRate = new ExchangeRate()
+                if (data[date] != null && data[date]["rates"].ContainsKey(currency))
                 {
-                    Currency = currency,
-                    Date = date,
-                    Rate = data["rates"][currency]
-                };
+                    // Create new Exchange Rate
+                    var newRate = new ExchangeRate()
+                    {
+                        Currency = currency,
+                        Date = date,
+                        Rate = data[date]["rates"][currency]
+                    };
 
-                // Add the new ExchangeRate into the context
-                context.ExchangeRates.Add(newRate);
-            }             
+                    // Add the new ExchangeRate into the context
+                    context.ExchangeRates.Add(newRate);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Do nothing fail data will be retrieve later
+            }
         }
     }
 }
