@@ -1,0 +1,47 @@
+﻿@model IEnumerable<ExchangeRates.Models.ExchangeRate>
+
+@{
+    ViewBag.Title = "Chart";
+    Layout = null;
+}
+
+<div class="row">
+    <div id="chartDiv" class="span12"></div>
+</div>
+
+@if (Model.Count() > 0)
+{
+    <script type="text/javascript">
+        $(document).ready(function () {
+          
+            var line1 = [
+                @Html.Raw(String.Join(",", Model.Select(m => "['" + m.Date.ToString("MM-dd-yyyy") + "'," + m.Rate + "]")))
+            ];
+            var plot1 = $.jqplot('chartDiv', [line1], {
+                title: 'Exchange Rate of @ViewBag.Currency against USD From @ViewBag.From.ToString("MM/dd/yyyy") To @ViewBag.To.ToString("MM/dd/yyyy")',
+                axesDefaults: {
+                    
+                },
+                axes: {
+                    xaxis: {
+                        renderer: $.jqplot.CategoryAxisRenderer,
+                        tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                        tickOptions: {
+                            angle: -75,
+                            fontSize: '8pt'
+                        }                  
+                    },
+                    yaxis:{
+                      tickOptions:{
+                        formatString:'%.6s'
+                        }
+                    }
+                },                
+                cursor: {
+                    show: false
+                }
+            });
+        });
+    </script>
+}
+

@@ -1,0 +1,56 @@
+﻿@model ExchangeRates.Models.ExchangeInput
+
+@{
+    ViewBag.Title = "Index";
+}
+
+@section Header {
+    <script src="@Url.Content("~/Scripts/jquery-ui-1.8.11.min.js")" type="text/javascript"></script>  
+    <!--[if lt IE 9]><script language="javascript" type="text/javascript" src="@Url.Content("~/Scripts/excanvas.j")s"></script><![endif]-->
+    <script language="javascript" type="text/javascript" src="@Url.Content("~/Scripts/jquery.jqplot.js")"></script>
+    <script language="javascript" type="text/javascript" src="@Url.Content("~/Scripts/plugins/jqplot.canvasTextRenderer.js")"></script>
+    <script language="javascript" type="text/javascript" src="@Url.Content("~/Scripts/plugins/jqplot.canvasAxisTickRenderer.js")"></script>
+    <script language="javascript" type="text/javascript" src="@Url.Content("~/Scripts/plugins/jqplot.categoryAxisRenderer.js")"></script>
+    <link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/jquery.jqplot.css")" />
+    <script src="@Url.Content("~/Scripts/main.js")" type="text/javascript"></script>
+          
+}
+
+@using (Html.BeginForm()) {
+
+    <div class="row">
+        <div class="offset2 span3">
+            <span class="label">Start date</span>
+            @Html.TextBoxFor(model => model.StartDate)
+        </div>
+    
+        <div class="span3">
+            <span class="label">End date</span>
+            @Html.TextBoxFor(model => model.EndDate)    
+        </div>       
+
+        <div class="span3">
+            <span class="label">Currency</span>
+            @Html.DropDownListFor(mode => mode.TargetCurrency,
+          ((IEnumerable<string>)ViewData["TrackedCurrencies"]).Select(curr => new SelectListItem { Text = curr, Value = curr, Selected = curr == "EUR" }).ToArray())           
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="span11">        
+            <input type="submit" value="Show Chart" class="btn btn-primary show-graph-button" />
+        </div>
+    </div>
+}
+
+<div class="row">
+    <div class="span12">
+        @Html.ValidationSummary()
+    </div>
+</div>
+
+@if (ViewData.ModelState.IsValid)
+{
+    @Html.Action("Chart", new { input = Model })
+}
+
