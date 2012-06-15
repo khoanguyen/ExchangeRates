@@ -9,6 +9,7 @@ using ExchangeRates.Models;
 using System.Diagnostics;
 using System.Web.Configuration;
 using System.Transactions;
+using ExchangeRates.Repositories;
 
 namespace ExchangeRates.Data
 {
@@ -28,10 +29,11 @@ namespace ExchangeRates.Data
         // Worker thread which proceed the queued DataRequest
         private Thread _workerThread;
 
-        // DataRequest queue
-        private Queue<DataRequest> _queue;
-
+        // Tracked Currencies
         private IEnumerable<string> _trackedCurrencies;
+
+        // RequestMessage repository
+        private IRequestMessageRepository _repository;
 
         /// <summary>
         /// Singleton Instance
@@ -52,9 +54,7 @@ namespace ExchangeRates.Data
         /// </summary>
         private DataBackgroundWorker()
         {
-            // Create a queue
-            _queue = new Queue<DataRequest>();
-
+           
             // Create worker thread
             _workerThread = new Thread(new ThreadStart(ProcessQueue));
 
@@ -64,23 +64,19 @@ namespace ExchangeRates.Data
             // Get Tracked currencies
             _trackedCurrencies = WebConfigurationManager.AppSettings["TrackedCurrencies"]
                 .Split(new char[] {',', ' '}, StringSplitOptions.RemoveEmptyEntries);
+
+            // Create repository
+            // This should be replaced with DI container in a serious implementation
+            _repository = new RequestMessageRepository();
         }
 
         /// <summary>
         /// Queue a DataRequest for processing
         /// </summary>
         /// <param name="request"></param>
-        public void QueueRequest(DataRequest request)
-        {            
-            // Gain synchronization lock
-            lock (_lock)
-            {
-                // Enqueue Request
-                _queue.Enqueue(request);
-
-                // Notify worker thread
-                Monitor.Pulse(_lock);
-            }
+        public void QueueRequest(DateTime[] dateList)
+        {
+            _repository.EnqueueRequest(dateList);
         }
 
         /// <summary>
@@ -90,29 +86,26 @@ namespace ExchangeRates.Data
         {
             while (true)
             {
-                // Retrieve a request from the queue
-                DataRequest request = null;
-                lock (_lock)
-                {
-                    // If the queu is empty then put Worker Thread to Wait mode 
-                    // until there is a notification from Monitor.Pulse call
-                    if (_queue.Count == 0) Monitor.Wait(_lock);
-
-                    // Dequeue a request
-                    request = _queue.Dequeue();
-                }
-                if (request != null)
+                
+                // Dequeue a request with a unique token and get its Date list
+                var uniqueToken = Guid.NewGuid().ToString();
+                DateTime[] dateList = _repository.DequeueRequest(uniqueToken);
+                
+                if (dateList.Count() > 0)
                 {
                     try
                     {
                         // Proceed request
-                        ProcessRequest(request);
+                        ProcessRequest(dateList);
                     }
                     catch (Exception ex)
                     {
                         Debug.WriteLine(ex);
                     }
                 }
+
+                // Sleep 1 second
+                Thread.Sleep(1000);
             }
         }
 
@@ -120,13 +113,13 @@ namespace ExchangeRates.Data
         /// Proceed DataRequest 
         /// </summary>
         /// <param name="request"></param>
-        private void ProcessRequest(DataRequest request)
+        private void ProcessRequest(DateTime[] dateList)
         {
             // Create DB context
             using (ExchangeRateContext context = new ExchangeRateContext())
             {               
                 // Load data from remote service
-                dynamic data = ExchangeRateClient.ReadFromRemoteService(request.ListOfDays);
+                dynamic data = ExchangeRateClient.ReadFromRemoteService(dateList);
 
                 using (TransactionScope scope = new TransactionScope(TransactionScopeOption.Required,
                     new TransactionOptions { IsolationLevel = IsolationLevel.RepeatableRead }))
@@ -134,7 +127,7 @@ namespace ExchangeRates.Data
 
                     // Insert all tracked currencies data into the context
                     foreach (string currency in _trackedCurrencies)
-                        UpdateDataForCurrency(context, currency, request, data);                    
+                        UpdateDataForCurrency(context, currency, dateList, data);                    
 
                     // Save context
                     context.SaveChanges();
@@ -152,10 +145,10 @@ namespace ExchangeRates.Data
         /// <param name="currency"></param>
         /// <param name="request"></param>
         /// <param name="data"></param>
-        private void UpdateDataForCurrency(ExchangeRateContext context, string currency, DataRequest request, dynamic data)
+        private void UpdateDataForCurrency(ExchangeRateContext context, string currency, DateTime[] dateList, dynamic data)
         {
             // Get from time and to time and strip their time parts
-            var dates = request.ListOfDays.ToList();
+            var dates = dateList.ToList();
 
             // Retrieve the ExchangeRate data from database
             // Then filter with requested currency and request time 

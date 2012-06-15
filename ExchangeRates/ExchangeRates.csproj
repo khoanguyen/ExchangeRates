@@ -65,8 +65,20 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\DataBackgroundWorker.cs" />
-    <Compile Include="Data\DataRequest.cs" />
     <Compile Include="DI\MyControllerFactory.cs" />
+    <Compile Include="Migrations\201206150549338_AddExchangeRateClass.cs" />
+    <Compile Include="Migrations\201206150549338_AddExchangeRateClass.Designer.cs">
+      <DependentUpon>201206150549338_AddExchangeRateClass.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201206150556525_AddRequestMessageClass.cs" />
+    <Compile Include="Migrations\201206150556525_AddRequestMessageClass.Designer.cs">
+      <DependentUpon>201206150556525_AddRequestMessageClass.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201206150600412_AddDequeueMessageStoredProcedure.cs" />
+    <Compile Include="Migrations\201206150600412_AddDequeueMessageStoredProcedure.Designer.cs">
+      <DependentUpon>201206150600412_AddDequeueMessageStoredProcedure.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Models\RequestMessage.cs" />
     <Compile Include="Repositories\ExchangeRateRepository.cs" />
     <Compile Include="Repositories\IExchangeRateRepository.cs" />
     <Compile Include="Controllers\HomeController.cs" />
@@ -80,6 +92,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Data\ExchangeRateClient.cs" />
     <Compile Include="Helpers\DateTimeHelper.cs" />
+    <Compile Include="Repositories\IRequestMessageRepository.cs" />
+    <Compile Include="Repositories\RequestMessageRepository.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\jquery.jqplot.css" />

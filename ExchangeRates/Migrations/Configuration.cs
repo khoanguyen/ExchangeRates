@@ -12,7 +12,7 @@ namespace ExchangeRates.Migrations
     {
         public Configuration()
         {
-            AutomaticMigrationsEnabled = true;
+            AutomaticMigrationsEnabled = false;
         }
 
         protected override void Seed(ExchangeRates.Context.ExchangeRateContext context)

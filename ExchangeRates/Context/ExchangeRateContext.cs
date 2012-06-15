@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web;
 using System.Data.Entity;
 using ExchangeRates.Models;
+using System.Data.SqlClient;
 
 namespace ExchangeRates.Context
 {
@@ -16,6 +17,23 @@ namespace ExchangeRates.Context
         /// ExchangeRates DbSEt for ExchangeRates table
         /// </summary>
         public DbSet<ExchangeRate> ExchangeRates { get; set; }
+
+        /// <summary>
+        /// RequestMessages DbSEt for RequestMessages table
+        /// </summary>
+        public DbSet<RequestMessage> RequestMessages { get; set; }
+
+        /// <summary>
+        /// Dequeue a request message
+        /// </summary>
+        /// <param name="uniqueToken"></param>
+        /// <returns></returns>
+        public IEnumerable<RequestMessage> DequeueMessage(string uniqueToken)
+        {
+            // Call DeQueueMessage stored procedure
+            return this.Database.SqlQuery<RequestMessage>("exec DeQueueMessage @uniqueToken",
+                new SqlParameter("@uniqueToken", uniqueToken));
+        }
 
         /// <summary>
         /// Override

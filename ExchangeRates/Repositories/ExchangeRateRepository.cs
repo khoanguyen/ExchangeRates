@@ -47,10 +47,7 @@ namespace ExchangeRates.Repositories
                     var nonExistDates = dateArray.Where(d => !existDate.Contains(d));
 
                     // Queue a request for pulling data of missing to DataBackgroundWorker
-                    DataBackgroundWorker.Instance.QueueRequest(new DataRequest
-                    {
-                        ListOfDays = nonExistDates,                        
-                    });
+                    DataBackgroundWorker.Instance.QueueRequest(nonExistDates.ToArray());
 
                     // Get data of missing dates from remoteService
                     rates = ExchangeRateClient.ReadFromRemoteService(nonExistDates);
@@ -62,10 +59,7 @@ namespace ExchangeRates.Repositories
                     rates = ExchangeRateClient.ReadFromRemoteService(from, to);
 
                     // Queue a request for pulling data from Start date to End date to DataBackgroundWorker
-                    DataBackgroundWorker.Instance.QueueRequest(new DataRequest
-                    {
-                        ListOfDays = DateTimeHelper.GetDateTimeArray(from, to)                        
-                    });
+                    DataBackgroundWorker.Instance.QueueRequest(DateTimeHelper.GetDateTimeArray(from, to));
                 }
 
                 // Parse the result and add them into result collection
