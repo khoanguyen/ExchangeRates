@@ -51,8 +51,7 @@ namespace ExchangeRates.Repositories
             using (var context = new ExchangeRateContext())
             {
                 // Execute stored procedure to dequeue the expected RequestMessage
-                var result = context.Database.SqlQuery<RequestMessage>("exec DequeueMessage @uniqueToken",
-                    new SqlParameter("@uniqueToken", uniqueToken)).ToArray();
+                var result = context.DequeueMessage(uniqueToken).ToArray();
                                 
                 DateTime[] dateList = null;
                 
