@@ -29,6 +29,7 @@ namespace ExchangeRates
                 new { controller = "Home", action = "Index", id = UrlParameter.Optional } // Parameter defaults
             );
 
+            // Comment something
         }
 
         protected void Application_Start()
